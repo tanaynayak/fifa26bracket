@@ -419,7 +419,7 @@ export async function renderShareImageBlob(
 
   if (champ && runner) {
     drawTeamRow(ctx, champ, flagById.get(champ.id) ?? null, "WINNER", 44, 542, 452, "#f4b323");
-    drawTeamRow(ctx, runner, flagById.get(runner.id) ?? null, "RUNNER", 44, 606, 452, "rgba(255,255,255,0.16)");
+    drawTeamRow(ctx, runner, flagById.get(runner.id) ?? null, "RUNNER-UP", 44, 606, 452, "rgba(255,255,255,0.16)");
   } else {
     ctx.font = font(16, 700, FONT);
     ctx.fillStyle = "#94a3b8";
