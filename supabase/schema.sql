@@ -44,6 +44,15 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ---- prediction lock -------------------------------------------------------
+-- 3:00 PM Eastern Time on June 11, 2026 is 19:00 UTC.
+create or replace function public.predictions_are_open()
+returns boolean language sql stable as $$
+  select now() < timestamp with time zone '2026-06-11 19:00:00+00';
+$$;
+
+grant execute on function public.predictions_are_open() to authenticated;
+
 -- ---- brackets -------------------------------------------------------------
 create table if not exists public.brackets (
   user_id    uuid primary key references auth.users (id) on delete cascade,
@@ -54,9 +63,37 @@ create table if not exists public.brackets (
 alter table public.brackets enable row level security;
 
 drop policy if exists "users manage their own bracket" on public.brackets;
-create policy "users manage their own bracket"
-  on public.brackets for all
-  to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "users can read own bracket" on public.brackets;
+create policy "users can read own bracket"
+  on public.brackets for select
+  to authenticated using (user_id = auth.uid());
+
+drop policy if exists "users can insert own bracket before lock" on public.brackets;
+create policy "users can insert own bracket before lock"
+  on public.brackets for insert
+  to authenticated with check (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  );
+
+drop policy if exists "users can update own bracket before lock" on public.brackets;
+create policy "users can update own bracket before lock"
+  on public.brackets for update
+  to authenticated using (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  ) with check (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  );
+
+drop policy if exists "users can delete own bracket before lock" on public.brackets;
+create policy "users can delete own bracket before lock"
+  on public.brackets for delete
+  to authenticated using (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  );
 
 -- ---- leagues --------------------------------------------------------------
 create table if not exists public.leagues (
@@ -76,12 +113,30 @@ create policy "leagues readable by authenticated users"
 
 drop policy if exists "owner can create a league" on public.leagues;
 create policy "owner can create a league"
-  on public.leagues for insert to authenticated with check (owner = auth.uid());
+  on public.leagues for insert to authenticated with check (
+    owner = auth.uid()
+    and public.predictions_are_open()
+  );
 
 drop policy if exists "owner can update/delete their league" on public.leagues;
-create policy "owner can update/delete their league"
-  on public.leagues for all to authenticated
-  using (owner = auth.uid()) with check (owner = auth.uid());
+drop policy if exists "owner can update their league before lock" on public.leagues;
+create policy "owner can update their league before lock"
+  on public.leagues for update to authenticated
+  using (
+    owner = auth.uid()
+    and public.predictions_are_open()
+  ) with check (
+    owner = auth.uid()
+    and public.predictions_are_open()
+  );
+
+drop policy if exists "owner can delete their league before lock" on public.leagues;
+create policy "owner can delete their league before lock"
+  on public.leagues for delete to authenticated
+  using (
+    owner = auth.uid()
+    and public.predictions_are_open()
+  );
 
 -- ---- league_members -------------------------------------------------------
 create table if not exists public.league_members (
@@ -110,12 +165,18 @@ create policy "members can see co-members of their leagues"
 drop policy if exists "users can join (insert their own membership)" on public.league_members;
 create policy "users can join (insert their own membership)"
   on public.league_members for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  );
 
 drop policy if exists "users can leave their own membership" on public.league_members;
 create policy "users can leave their own membership"
   on public.league_members for delete to authenticated
-  using (user_id = auth.uid());
+  using (
+    user_id = auth.uid()
+    and public.predictions_are_open()
+  );
 
 -- Join by invite code inside the database. This avoids a dead end where an
 -- account cannot read a league row yet because it is not already a member.
@@ -126,6 +187,10 @@ declare
 begin
   if auth.uid() is null then
     raise exception 'Not signed in' using errcode = '28000';
+  end if;
+
+  if not public.predictions_are_open() then
+    raise exception 'Predictions and leagues are locked' using errcode = 'P0001';
   end if;
 
   select *

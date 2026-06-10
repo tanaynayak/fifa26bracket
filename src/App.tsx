@@ -9,10 +9,12 @@ import {
 } from "./lib/bracketState";
 import { useAuth } from "./lib/auth";
 import { getMyBracket, saveMyBracket } from "./lib/cloud";
+import { PREDICTION_LOCK_LABEL, predictionsLocked } from "./lib/lock";
 import Stepper from "./components/Stepper";
 import TeamFlag from "./components/TeamFlag";
 import BrandMark from "./components/BrandMark";
 import AuthButton from "./components/AuthButton";
+import LockCountdown from "./components/LockCountdown";
 import PitchBackground from "./components/PitchBackground";
 import GroupStage from "./components/GroupStage";
 import ThirdPlaceStage from "./components/ThirdPlaceStage";
@@ -75,6 +77,9 @@ export default function App() {
 
   const [leaguesOpen, setLeaguesOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [predictionsAreLocked, setPredictionsAreLocked] = useState(() =>
+    predictionsLocked()
+  );
 
   // Measure the fixed header so the pitch background can start beneath it.
   const headerRef = useRef<HTMLElement>(null);
@@ -113,7 +118,7 @@ export default function App() {
         setStandings(cloud.standings);
         setThirdQualifiers(cloud.thirdQualifiers);
         setPicks(cloud.picks);
-      } else {
+      } else if (!predictionsLocked()) {
         await saveMyBracket(stateRef.current);
       }
     })();
@@ -124,17 +129,20 @@ export default function App() {
 
   // Debounced cloud autosave while signed in.
   useEffect(() => {
-    if (!user) return;
+    if (!user || predictionsAreLocked) return;
     const t = setTimeout(() => void saveMyBracket(state), 800);
     return () => clearTimeout(t);
-  }, [user?.id, state]);
+  }, [user?.id, predictionsAreLocked, state]);
 
   const canAccess = (s: number) => s <= 2 || thirdQualifiers.length === 8;
 
-  const reorder = (group: GroupId, order: string[]) =>
+  const reorder = (group: GroupId, order: string[]) => {
+    if (predictionsAreLocked) return;
     setStandings((prev) => ({ ...prev, [group]: order }));
+  };
 
-  const toggleThird = (group: GroupId) =>
+  const toggleThird = (group: GroupId) => {
+    if (predictionsAreLocked) return;
     setThirdQualifiers((prev) =>
       prev.includes(group)
         ? prev.filter((g) => g !== group)
@@ -142,16 +150,20 @@ export default function App() {
           ? [...prev, group]
           : prev
     );
+  };
 
-  const pick = (match: number, teamId: string) =>
+  const pick = (match: number, teamId: string) => {
+    if (predictionsAreLocked) return;
     setPicks((prev) =>
       prev[match] === teamId
         ? // tapping the current winner again clears the pick
           Object.fromEntries(Object.entries(prev).filter(([k]) => +k !== match))
         : { ...prev, [match]: teamId }
     );
+  };
 
   const reset = () => {
+    if (predictionsAreLocked) return;
     if (!confirm("Clear your whole bracket and start over?")) return;
     setStandings(defaultStandings());
     setThirdQualifiers([]);
@@ -198,8 +210,14 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                disabled={predictionsAreLocked}
                 onClick={reset}
-                className="hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:block"
+                title={
+                  predictionsAreLocked
+                    ? `Predictions locked ${PREDICTION_LOCK_LABEL}`
+                    : "Reset bracket"
+                }
+                className="hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:block"
               >
                 Reset
               </button>
@@ -214,6 +232,9 @@ export default function App() {
               <AuthButton />
             </div>
           </div>
+          <div className="relative z-10 mx-auto flex max-w-7xl justify-end px-4 pb-3 sm:px-6">
+            <LockCountdown onLockChange={setPredictionsAreLocked} />
+          </div>
           <div className="relative z-10 border-t border-white/10 py-2.5">
             <Stepper step={step} onJump={setStep} canAccess={canAccess} />
           </div>
@@ -227,19 +248,25 @@ export default function App() {
         </h2>
 
         {step === 1 && (
-          <GroupStage standings={standings} onReorder={reorder} />
+          <GroupStage
+            standings={standings}
+            onReorder={reorder}
+            locked={predictionsAreLocked}
+          />
         )}
         {step === 2 && (
           <ThirdPlaceStage
             standings={standings}
             selected={thirdQualifiers}
             onToggle={toggleThird}
+            locked={predictionsAreLocked}
           />
         )}
         {step === 3 && (
           <KnockoutStage
             bracket={bracket}
             onPick={pick}
+            readOnly={predictionsAreLocked}
             onShare={() => setShareOpen(true)}
           />
         )}
@@ -267,7 +294,11 @@ export default function App() {
         </div>
       </main>
 
-      <LeaguesModal open={leaguesOpen} onClose={() => setLeaguesOpen(false)} />
+      <LeaguesModal
+        open={leaguesOpen}
+        onClose={() => setLeaguesOpen(false)}
+        locked={predictionsAreLocked}
+      />
       <ShareModal
         open={shareOpen}
         onClose={() => setShareOpen(false)}

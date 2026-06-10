@@ -7,9 +7,15 @@ interface Props {
   standings: Standings;
   selected: GroupId[];
   onToggle: (group: GroupId) => void;
+  locked?: boolean;
 }
 
-export default function ThirdPlaceStage({ standings, selected, onToggle }: Props) {
+export default function ThirdPlaceStage({
+  standings,
+  selected,
+  onToggle,
+  locked,
+}: Props) {
   const full = selected.length >= 8;
 
   return (
@@ -33,7 +39,7 @@ export default function ThirdPlaceStage({ standings, selected, onToggle }: Props
           const teamId = standings[g][2];
           const team = teamById(teamId)!;
           const isSelected = selected.includes(g);
-          const disabled = !isSelected && full;
+          const disabled = locked || (!isSelected && full);
           return (
             <button
               key={g}

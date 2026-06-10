@@ -17,9 +17,10 @@ import KnockoutStage from "./KnockoutStage";
 interface Props {
   open: boolean;
   onClose: () => void;
+  locked?: boolean;
 }
 
-export default function LeaguesModal({ open, onClose }: Props) {
+export default function LeaguesModal({ open, onClose, locked }: Props) {
   const { user, signInWithGoogle } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [active, setActive] = useState<League | null>(null);
@@ -46,6 +47,10 @@ export default function LeaguesModal({ open, onClose }: Props) {
   }, [active]);
 
   const handleCreate = async () => {
+    if (locked) {
+      setError("Leagues are locked.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -61,6 +66,10 @@ export default function LeaguesModal({ open, onClose }: Props) {
   };
 
   const handleJoin = async () => {
+    if (locked) {
+      setError("Leagues are locked.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -137,18 +146,24 @@ export default function LeaguesModal({ open, onClose }: Props) {
             )}
 
             {/* Create + Join */}
+            {locked && (
+              <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                League creation and joining are locked.
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-slate-200 p-4">
                 <h4 className="mb-2 text-sm font-bold text-ink">Create a league</h4>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={locked}
                   placeholder="League name"
-                  className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                  className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 />
                 <button
                   type="button"
-                  disabled={busy || !name.trim()}
+                  disabled={locked || busy || !name.trim()}
                   onClick={handleCreate}
                   className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:bg-slate-300"
                 >
@@ -160,13 +175,14 @@ export default function LeaguesModal({ open, onClose }: Props) {
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  disabled={locked}
                   placeholder="e.g. 7KQ2M9"
                   maxLength={6}
-                  className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-display font-bold tracking-widest focus:border-emerald-500 focus:outline-none"
+                  className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-display font-bold tracking-widest focus:border-emerald-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 />
                 <button
                   type="button"
-                  disabled={busy || code.trim().length < 4}
+                  disabled={locked || busy || code.trim().length < 4}
                   onClick={handleJoin}
                   className="w-full rounded-lg bg-ink py-2 text-sm font-bold text-white transition hover:bg-ink-700 disabled:bg-slate-300"
                 >

@@ -6,9 +6,10 @@ import SortableRanking from "./SortableRanking";
 interface Props {
   standings: Standings;
   onReorder: (group: GroupId, order: string[]) => void;
+  locked?: boolean;
 }
 
-export default function GroupStage({ standings, onReorder }: Props) {
+export default function GroupStage({ standings, onReorder, locked }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {GROUPS.map((group) => (
@@ -21,13 +22,14 @@ export default function GroupStage({ standings, onReorder }: Props) {
               Group {group.id}
             </h3>
             <span className="text-[11px] font-medium text-slate-400">
-              drag ⠿ to rank
+              {locked ? "locked" : "drag to rank"}
             </span>
           </header>
 
           <SortableRanking
             order={standings[group.id]}
             onReorder={(order) => onReorder(group.id, order)}
+            disabled={locked}
           />
 
           <div className="mt-3 flex items-center gap-3 text-[11px] font-medium text-slate-400">

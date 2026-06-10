@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { normalizeState, type BracketState } from "./bracketState";
+import { PREDICTION_LOCK_LABEL, predictionsLocked } from "./lock";
 
 export interface Profile {
   id: string;
@@ -62,6 +63,7 @@ export async function getMyBracket(): Promise<BracketState | null> {
 
 export async function saveMyBracket(state: BracketState): Promise<void> {
   if (!supabase) return;
+  if (predictionsLocked()) return;
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return;
@@ -84,6 +86,9 @@ function randomCode(len = 6): string {
 
 export async function createLeague(name: string): Promise<League> {
   if (!supabase) throw new Error("Cloud not configured");
+  if (predictionsLocked()) {
+    throw new Error(`Predictions and leagues locked ${PREDICTION_LOCK_LABEL}`);
+  }
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error("Not signed in");
@@ -110,6 +115,9 @@ export async function createLeague(name: string): Promise<League> {
 
 export async function joinLeague(code: string): Promise<League> {
   if (!supabase) throw new Error("Cloud not configured");
+  if (predictionsLocked()) {
+    throw new Error(`Predictions and leagues locked ${PREDICTION_LOCK_LABEL}`);
+  }
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) throw new Error("Not signed in");

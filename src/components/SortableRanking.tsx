@@ -5,6 +5,7 @@ import TeamFlag from "./TeamFlag";
 interface Props {
   order: string[];
   onReorder: (order: string[]) => void;
+  disabled?: boolean;
 }
 
 const POS_STYLES = [
@@ -37,7 +38,7 @@ interface DragState {
 }
 
 /** Pointer-based sortable list — works with both mouse and touch. */
-export default function SortableRanking({ order, onReorder }: Props) {
+export default function SortableRanking({ order, onReorder, disabled }: Props) {
   const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
   const [drag, setDrag] = useState<DragState | null>(null);
 
@@ -45,6 +46,7 @@ export default function SortableRanking({ order, onReorder }: Props) {
     Math.max(lo, Math.min(hi, n));
 
   const onPointerDown = (index: number, e: React.PointerEvent) => {
+    if (disabled) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rows = itemRefs.current;
@@ -108,12 +110,18 @@ export default function SortableRanking({ order, onReorder }: Props) {
             <button
               type="button"
               aria-label={`Drag ${team.name} to reorder`}
+              disabled={disabled}
               onPointerDown={(e) => onPointerDown(idx, e)}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
               style={{ touchAction: "none" }}
-              className="flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-slate-400 transition hover:bg-white hover:text-emerald-600 active:cursor-grabbing"
+              className={[
+                "flex h-8 w-8 shrink-0 touch-none items-center justify-center rounded-md text-slate-400 transition",
+                disabled
+                  ? "cursor-not-allowed opacity-35"
+                  : "cursor-grab hover:bg-white hover:text-emerald-600 active:cursor-grabbing",
+              ].join(" ")}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
                 <circle cx="5" cy="3" r="1.4" />
