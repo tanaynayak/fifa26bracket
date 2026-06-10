@@ -138,6 +138,16 @@ export default function App() {
 
   const reorder = (group: GroupId, order: string[]) => {
     if (predictionsAreLocked) return;
+    const hasKnockoutPicks = Object.keys(picks).length > 0;
+    if (
+      hasKnockoutPicks &&
+      !confirm(
+        "Changing group rankings will reset your knockout picks. Continue?"
+      )
+    ) {
+      return;
+    }
+    if (hasKnockoutPicks) setPicks({});
     setStandings((prev) => ({ ...prev, [group]: order }));
   };
 
