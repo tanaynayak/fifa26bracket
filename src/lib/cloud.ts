@@ -53,11 +53,19 @@ function asLeague(data: unknown): League | null {
 
 export async function getMyBracket(): Promise<BracketState | null> {
   if (!supabase) return null;
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) return null;
   const { data, error } = await supabase
     .from("brackets")
     .select("data")
+    .eq("user_id", uid)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    console.warn("Could not load cloud bracket", error);
+    return null;
+  }
+  if (!data) return null;
   return normalizeState(data.data);
 }
 
@@ -67,9 +75,13 @@ export async function saveMyBracket(state: BracketState): Promise<void> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return;
-  await supabase
+  const { error } = await supabase
     .from("brackets")
-    .upsert({ user_id: uid, data: state, updated_at: new Date().toISOString() });
+    .upsert(
+      { user_id: uid, data: state, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+  if (error) console.warn("Could not save cloud bracket", error);
 }
 
 // ---- Leagues ----
