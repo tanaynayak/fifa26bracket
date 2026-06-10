@@ -9,10 +9,12 @@ import {
   type LeagueMemberView,
 } from "../lib/cloud";
 import { computeBracket, summarize, type BracketState } from "../lib/bracketState";
-import { teamById } from "../data/teams";
+import { GROUPS, GROUP_IDS, teamById } from "../data/teams";
 import Modal from "./Modal";
 import TeamFlag from "./TeamFlag";
 import KnockoutStage from "./KnockoutStage";
+
+type ViewerTab = "groups" | "third" | "knockout";
 
 interface Props {
   open: boolean;
@@ -221,11 +223,7 @@ export default function LeaguesModal({
         title={`${viewing?.profile?.display_name ?? "Player"}'s bracket`}
       >
         {viewing?.bracket ? (
-          <KnockoutStage
-            bracket={computeBracket(viewing.bracket)}
-            onPick={() => {}}
-            readOnly
-          />
+          <MemberBracketViewer state={viewing.bracket} />
         ) : (
           <p className="py-8 text-center text-sm text-slate-400">
             This player hasn't built a bracket yet.
@@ -233,6 +231,148 @@ export default function LeaguesModal({
         )}
       </Modal>
     </>
+  );
+}
+
+function MemberBracketViewer({ state }: { state: BracketState }) {
+  const [tab, setTab] = useState<ViewerTab>("groups");
+  const tabs: { id: ViewerTab; label: string }[] = [
+    { id: "groups", label: "Groups" },
+    { id: "third", label: "Third-place" },
+    { id: "knockout", label: "Knockout" },
+  ];
+
+  return (
+    <div>
+      <div className="mb-5 flex rounded-xl bg-slate-100 p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={[
+              "flex-1 rounded-lg px-3 py-2 text-sm font-bold transition",
+              tab === t.id
+                ? "bg-white text-ink shadow-sm"
+                : "text-slate-500 hover:text-slate-700",
+            ].join(" ")}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "groups" && <GroupPredictionsView state={state} />}
+      {tab === "third" && <ThirdPlacePredictionsView state={state} />}
+      {tab === "knockout" && (
+        <KnockoutStage
+          bracket={computeBracket(state)}
+          onPick={() => {}}
+          readOnly
+        />
+      )}
+    </div>
+  );
+}
+
+function GroupPredictionsView({ state }: { state: BracketState }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {GROUPS.map((group) => (
+        <section
+          key={group.id}
+          className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70"
+        >
+          <h4 className="mb-3 font-display text-lg font-bold uppercase tracking-wider text-ink">
+            Group {group.id}
+          </h4>
+          <ol className="space-y-1.5">
+            {state.standings[group.id].map((teamId, index) => {
+              const team = teamById(teamId);
+              if (!team) return null;
+              return (
+                <li
+                  key={team.id}
+                  className={[
+                    "flex items-center gap-2.5 rounded-xl px-2.5 py-2",
+                    index < 2
+                      ? "bg-emerald-50/80"
+                      : index === 2
+                        ? "bg-amber-50/80"
+                        : "bg-slate-50",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold",
+                      index < 2
+                        ? "bg-emerald-500 text-white"
+                        : index === 2
+                          ? "bg-amber-400 text-amber-950"
+                          : "bg-slate-300 text-slate-600",
+                    ].join(" ")}
+                  >
+                    {index + 1}
+                  </span>
+                  <TeamFlag flag={team.flag} size={26} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
+                    {team.name}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function ThirdPlacePredictionsView({ state }: { state: BracketState }) {
+  return (
+    <div>
+      <div className="mb-4 text-center">
+        <span className="rounded-full bg-emerald-100 px-3.5 py-1 font-display text-base font-bold uppercase tracking-wide text-emerald-700">
+          {state.thirdQualifiers.length} / 8 selected
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {GROUP_IDS.map((g) => {
+          const team = teamById(state.standings[g][2]);
+          const selected = state.thirdQualifiers.includes(g);
+          if (!team) return null;
+          return (
+            <div
+              key={g}
+              className={[
+                "flex items-center gap-3 rounded-xl p-3 ring-1",
+                selected
+                  ? "bg-emerald-600 text-white ring-emerald-600"
+                  : "bg-white text-slate-400 ring-slate-100",
+              ].join(" ")}
+            >
+              <TeamFlag flag={team.flag} size={30} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">
+                  {team.name}
+                </span>
+                <span className={selected ? "block text-xs text-emerald-100" : "block text-xs text-slate-400"}>
+                  3rd · Group {g}
+                </span>
+              </span>
+              <span
+                className={[
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                  selected ? "bg-white text-emerald-600" : "border border-slate-200 text-transparent",
+                ].join(" ")}
+              >
+                ✓
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
