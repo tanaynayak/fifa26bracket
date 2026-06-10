@@ -434,7 +434,7 @@ function LeagueDetail({
           const bracket = m.user_id === currentUserId ? currentBracket : m.bracket;
           const sum = bracket ? summarize(bracket) : null;
           const champ = sum?.champion ? teamById(sum.champion) : null;
-          const progress = bracketProgress(bracket);
+          const progress = progressSummary(bracket);
           return (
             <li key={m.user_id}>
               <button
@@ -477,7 +477,12 @@ function LeagueDetail({
   );
 }
 
-function bracketProgress(bracket: BracketState | null): string {
+function progressSummary(bracket: BracketState | null): string {
+  if (!bracket) return "No bracket yet";
+  return `Groups set · Thirds ${bracket.thirdQualifiers.length}/8 · ${knockoutProgress(bracket)}`;
+}
+
+function knockoutProgress(bracket: BracketState): string {
   if (!bracket) return "No bracket yet";
 
   const resolved = computeBracket(bracket);
