@@ -11,7 +11,23 @@ interface Props {
   userName: string;
 }
 
+async function waitForCardAssets(node: HTMLElement): Promise<void> {
+  await document.fonts?.ready;
+  const images = Array.from(node.querySelectorAll("img"));
+  await Promise.all(
+    images.map(async (img) => {
+      if (img.complete && img.naturalWidth > 0) return;
+      try {
+        await img.decode();
+      } catch {
+        /* html-to-image will still try to render whatever loaded */
+      }
+    })
+  );
+}
+
 async function renderPng(node: HTMLElement): Promise<Blob> {
+  await waitForCardAssets(node);
   const dataUrl = await toPng(node, {
     pixelRatio: 2,
     cacheBust: true,

@@ -24,6 +24,11 @@ function toTeams(ids: Array<string | null | undefined>): Team[] {
   return ids.map((id) => (id ? teamById(id) : null)).filter((t): t is Team => !!t);
 }
 
+function nameSize(name: string, base: number, min: number): number {
+  const over = Math.max(0, name.length - 8);
+  return Math.max(min, base - over * 2.4);
+}
+
 function TeamPill({
   team,
   label,
@@ -33,20 +38,90 @@ function TeamPill({
   label: string;
   accent?: "gold" | "green" | "slate";
 }) {
-  const accentClass =
-    accent === "gold"
-      ? "bg-gold text-ink"
-      : accent === "green"
-        ? "bg-emerald-500 text-white"
-        : "bg-white/15 text-white";
+  const labelBg = accent === "gold" ? "#f4b323" : accent === "green" ? "#1f8f4f" : "rgba(255,255,255,0.16)";
+  const labelColor = accent === "gold" ? "#0a1b2e" : "#ffffff";
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg bg-white/[0.08] p-2.5 ring-1 ring-white/10">
-      <div className={`w-16 shrink-0 rounded-md px-2 py-1 text-center text-[10px] font-black uppercase ${accentClass}`}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        width: "100%",
+        height: 58,
+        padding: "8px 12px",
+        borderRadius: 10,
+        background: "rgba(255,255,255,0.08)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)",
+        boxSizing: "border-box",
+      }}
+    >
+      <div
+        style={{
+          width: 74,
+          flexShrink: 0,
+          borderRadius: 8,
+          padding: "7px 0",
+          textAlign: "center",
+          background: labelBg,
+          color: labelColor,
+          fontSize: 11,
+          fontWeight: 900,
+          lineHeight: 1,
+          textTransform: "uppercase",
+        }}
+      >
         {label}
       </div>
       <Flag flag={team.flag} className="h-9 w-12 shrink-0 ring-1 ring-white/25" />
-      <div className="min-w-0 font-display text-2xl font-bold uppercase leading-none tracking-wide">
+      <div
+        style={{
+          minWidth: 0,
+          flex: 1,
+          overflow: "hidden",
+          color: "#ffffff",
+          fontFamily: '"Barlow Condensed", "Arial Narrow", Arial, sans-serif',
+          fontSize: nameSize(team.name, 31, 22),
+          fontWeight: 800,
+          lineHeight: 1,
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {team.name}
+      </div>
+    </div>
+  );
+}
+
+function SmallTeam({ team }: { team: Team }) {
+  return (
+    <div
+      style={{
+        height: 78,
+        borderRadius: 10,
+        background: "rgba(255,255,255,0.1)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 7,
+        padding: "8px 6px",
+        boxSizing: "border-box",
+      }}
+    >
+      <Flag flag={team.flag} className="h-7 w-10 ring-1 ring-white/20" />
+      <div
+        style={{
+          maxWidth: "100%",
+          color: "#ffffff",
+          fontSize: nameSize(team.name, 14, 10),
+          fontWeight: 800,
+          lineHeight: 1.05,
+          textAlign: "center",
+          whiteSpace: "normal",
+        }}
+      >
         {team.name}
       </div>
     </div>
@@ -69,12 +144,20 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
       bracket.results[m]?.away,
     ])
   );
+  const championFont = champ ? nameSize(champ.name, 66, 46) : 38;
 
   return (
     <div
       ref={ref}
-      style={{ width: 540, height: 960 }}
-      className="relative overflow-hidden text-white"
+      style={{
+        width: 540,
+        height: 960,
+        position: "relative",
+        overflow: "hidden",
+        color: "#ffffff",
+        fontFamily: '"Barlow", Arial, sans-serif',
+        background: "#0a1b2e",
+      }}
     >
       {/* base + shards */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(160deg,#07131f 0%,#0d243a 55%,#0a1b2e 100%)" }} />
@@ -87,30 +170,91 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
       <div className="absolute inset-6 rounded-[18px] border-2 border-white/18" />
       <div className="absolute inset-[34px] rounded-xl border border-gold/30" />
 
-      <div className="relative flex h-full flex-col px-8 py-8">
-        <div className="flex items-center gap-4">
-          <BrandMark size={76} className="shrink-0" />
-          <div>
-            <div className="font-display text-[32px] font-bold uppercase leading-none tracking-wide">
-              World Cup 26 Bracket
+      <div
+        style={{
+          position: "relative",
+          height: "100%",
+          padding: "32px 36px",
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 18, height: 96 }}>
+          <BrandMark size={66} className="shrink-0" />
+          <div style={{ paddingTop: 5, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: '"Barlow Condensed", "Arial Narrow", Arial, sans-serif',
+                fontSize: 38,
+                fontWeight: 800,
+                lineHeight: 0.95,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+              }}
+            >
+              <div>World Cup 26</div>
+              <div>Bracket</div>
             </div>
-            <div className="mt-1 text-base font-semibold text-slate-300">
+            <div
+              style={{
+                marginTop: 8,
+                color: "#cbd5e1",
+                fontSize: 16,
+                fontWeight: 700,
+                lineHeight: 1.15,
+              }}
+            >
               {userName ? `${userName}'s prediction` : "My prediction"}
             </div>
           </div>
         </div>
 
         {/* champion hero */}
-        <div className="mt-7 flex flex-col items-center text-center">
-          <div className="mb-4 rounded-full bg-gold px-6 py-2 font-display text-xl font-bold uppercase tracking-[0.18em] text-ink shadow-lg">
+        <div style={{ marginTop: 26, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div
+            style={{
+              marginBottom: 16,
+              borderRadius: 999,
+              background: "#f4b323",
+              padding: "10px 30px",
+              color: "#0a1b2e",
+              fontFamily: '"Barlow Condensed", "Arial Narrow", Arial, sans-serif',
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: 7,
+              lineHeight: 1,
+              textTransform: "uppercase",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
+            }}
+          >
             Champion
           </div>
           {champ ? (
             <>
-              <div className="rounded-[18px] bg-white/12 p-3 shadow-2xl ring-2 ring-white/25">
-                <Flag flag={champ.flag} className="h-[172px] w-[246px] ring-2 ring-white/40" />
+              <div
+                style={{
+                  borderRadius: 18,
+                  background: "rgba(255,255,255,0.12)",
+                  padding: 12,
+                  boxShadow: "0 20px 38px rgba(0,0,0,0.32), inset 0 0 0 2px rgba(255,255,255,0.22)",
+                }}
+              >
+                <Flag flag={champ.flag} className="h-[158px] w-[226px] ring-2 ring-white/40" />
               </div>
-              <div className="mt-4 max-w-full truncate font-display text-[64px] font-bold uppercase leading-none tracking-wide">
+              <div
+                style={{
+                  marginTop: 15,
+                  width: "100%",
+                  color: "#ffffff",
+                  fontFamily: '"Barlow Condensed", "Arial Narrow", Arial, sans-serif',
+                  fontSize: championFont,
+                  fontWeight: 800,
+                  lineHeight: 0.95,
+                  letterSpacing: 1,
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                  whiteSpace: "normal",
+                }}
+              >
                 {champ.name}
               </div>
             </>
@@ -122,12 +266,31 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
         </div>
 
         {/* the final */}
-        <div className="mt-6 rounded-xl bg-white/[0.07] p-3 ring-1 ring-white/10">
-          <div className="mb-2 text-center text-xs font-black uppercase tracking-[0.26em] text-gold">
+        <div
+          style={{
+            marginTop: 22,
+            borderRadius: 14,
+            background: "rgba(255,255,255,0.07)",
+            padding: 12,
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 10,
+              color: "#f4b323",
+              fontSize: 13,
+              fontWeight: 900,
+              lineHeight: 1,
+              letterSpacing: 8,
+              textAlign: "center",
+              textTransform: "uppercase",
+            }}
+          >
             Final
           </div>
           {champ && runner ? (
-            <div className="flex flex-col gap-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <TeamPill team={champ} label="Winner" accent="gold" />
               <TeamPill team={runner} label="Runner" />
             </div>
@@ -138,21 +301,27 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
           )}
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 18 }}>
           {/* semi-finalists */}
-          <section className="rounded-xl bg-white/[0.07] p-3 ring-1 ring-white/10">
-            <div className="mb-3 text-center text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">
+          <section style={{ borderRadius: 14, background: "rgba(255,255,255,0.07)", padding: 12, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }}>
+            <div
+              style={{
+                marginBottom: 12,
+                color: "#cbd5e1",
+                fontSize: 12,
+                fontWeight: 900,
+                lineHeight: 1,
+                letterSpacing: 6,
+                textAlign: "center",
+                textTransform: "uppercase",
+              }}
+            >
               Final four
             </div>
             {semis.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {semis.map((t) => (
-                  <div key={t.id} className="flex flex-col items-center gap-1.5 rounded-lg bg-white/10 px-2 py-2">
-                    <Flag flag={t.flag} className="h-8 w-11 ring-1 ring-white/20" />
-                    <span className="max-w-[78px] truncate text-center text-xs font-bold">
-                      {t.name}
-                    </span>
-                  </div>
+                  <SmallTeam key={t.id} team={t} />
                 ))}
               </div>
             ) : (
@@ -161,14 +330,25 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
           </section>
 
           {/* quarter-finalists */}
-          <section className="rounded-xl bg-white/[0.07] p-3 ring-1 ring-white/10">
-            <div className="mb-3 text-center text-[11px] font-black uppercase tracking-[0.2em] text-slate-300">
+          <section style={{ borderRadius: 14, background: "rgba(255,255,255,0.07)", padding: 12, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }}>
+            <div
+              style={{
+                marginBottom: 12,
+                color: "#cbd5e1",
+                fontSize: 12,
+                fontWeight: 900,
+                lineHeight: 1,
+                letterSpacing: 4,
+                textAlign: "center",
+                textTransform: "uppercase",
+              }}
+            >
               Quarter-finalists
             </div>
             {quarters.length > 0 ? (
-              <div className="grid grid-cols-4 gap-1.5">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 7 }}>
                 {quarters.map((t) => (
-                  <div key={t.id} className="rounded-md bg-white/10 p-1.5">
+                  <div key={t.id} className="rounded-md bg-white/10 p-1.5" style={{ display: "flex", justifyContent: "center" }}>
                     <Flag flag={t.flag} className="h-6 w-9 ring-1 ring-white/20" />
                   </div>
                 ))}
@@ -179,7 +359,21 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(({ state, userName }, ref) =
           </section>
         </div>
 
-        <div className="mt-auto pt-5 text-center text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">
+        <div
+          style={{
+            position: "absolute",
+            left: 36,
+            right: 36,
+            bottom: 25,
+            color: "#94a3b8",
+            fontSize: 12,
+            fontWeight: 900,
+            lineHeight: 1,
+            letterSpacing: 7,
+            textAlign: "center",
+            textTransform: "uppercase",
+          }}
+        >
           Build yours · World Cup 26 Bracket
         </div>
       </div>
