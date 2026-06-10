@@ -8,7 +8,7 @@ import {
   type League,
   type LeagueMemberView,
 } from "../lib/cloud";
-import { computeBracket, summarize } from "../lib/bracketState";
+import { computeBracket, summarize, type BracketState } from "../lib/bracketState";
 import { teamById } from "../data/teams";
 import Modal from "./Modal";
 import TeamFlag from "./TeamFlag";
@@ -17,10 +17,16 @@ import KnockoutStage from "./KnockoutStage";
 interface Props {
   open: boolean;
   onClose: () => void;
+  currentBracket: BracketState;
   locked?: boolean;
 }
 
-export default function LeaguesModal({ open, onClose, locked }: Props) {
+export default function LeaguesModal({
+  open,
+  onClose,
+  currentBracket,
+  locked,
+}: Props) {
   const { user, signInWithGoogle } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [active, setActive] = useState<League | null>(null);
@@ -43,7 +49,18 @@ export default function LeaguesModal({ open, onClose, locked }: Props) {
   }, [open, user]);
 
   useEffect(() => {
-    if (active) leagueMembers(active.id).then(setMembers);
+    if (!active) return;
+    let cancelled = false;
+    const refreshMembers = async () => {
+      const next = await leagueMembers(active.id);
+      if (!cancelled) setMembers(next);
+    };
+    void refreshMembers();
+    const id = window.setInterval(refreshMembers, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, [active]);
 
   const handleCreate = async () => {
@@ -105,6 +122,8 @@ export default function LeaguesModal({ open, onClose, locked }: Props) {
           <LeagueDetail
             league={active}
             members={members}
+            currentUserId={user.id}
+            currentBracket={currentBracket}
             onBack={() => setActive(null)}
             onViewMember={setViewing}
           />
@@ -220,11 +239,15 @@ export default function LeaguesModal({ open, onClose, locked }: Props) {
 function LeagueDetail({
   league,
   members,
+  currentUserId,
+  currentBracket,
   onBack,
   onViewMember,
 }: {
   league: League;
   members: LeagueMemberView[];
+  currentUserId: string;
+  currentBracket: BracketState;
   onBack: () => void;
   onViewMember: (m: LeagueMemberView) => void;
 }) {
@@ -268,13 +291,15 @@ function LeagueDetail({
       </h4>
       <ul className="space-y-2">
         {members.map((m) => {
-          const sum = m.bracket ? summarize(m.bracket) : null;
+          const bracket = m.user_id === currentUserId ? currentBracket : m.bracket;
+          const sum = bracket ? summarize(bracket) : null;
           const champ = sum?.champion ? teamById(sum.champion) : null;
+          const progress = bracketProgress(bracket);
           return (
             <li key={m.user_id}>
               <button
                 type="button"
-                onClick={() => onViewMember(m)}
+                onClick={() => onViewMember({ ...m, bracket })}
                 className="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 text-left transition hover:bg-emerald-50"
               >
                 {m.profile?.avatar_url ? (
@@ -292,6 +317,9 @@ function LeagueDetail({
                   <div className="truncate font-semibold text-slate-700">
                     {m.profile?.display_name ?? "Player"}
                   </div>
+                  <div className="text-xs font-medium text-slate-400">
+                    {progress}
+                  </div>
                 </div>
                 {champ ? (
                   <span className="flex items-center gap-1.5 rounded-full bg-gold/15 px-2.5 py-1 text-xs font-bold text-amber-700">
@@ -307,4 +335,35 @@ function LeagueDetail({
       </ul>
     </div>
   );
+}
+
+function bracketProgress(bracket: BracketState | null): string {
+  if (!bracket) return "No bracket yet";
+
+  const resolved = computeBracket(bracket);
+  if (resolved.results[104]?.winner) return "Bracket complete";
+  if (resolved.results[104]?.home && resolved.results[104]?.away) {
+    return "Final ready";
+  }
+  if (resolved.results[101]?.winner || resolved.results[102]?.winner) {
+    return "Semi-finals in progress";
+  }
+  if ([97, 98, 99, 100].some((m) => resolved.results[m]?.winner)) {
+    return "Quarter-finals in progress";
+  }
+  if ([89, 90, 91, 92, 93, 94, 95, 96].some((m) => resolved.results[m]?.winner)) {
+    return "Round of 16 in progress";
+  }
+  if (
+    [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88].some(
+      (m) => resolved.results[m]?.winner
+    )
+  ) {
+    return "Round of 32 in progress";
+  }
+  if (bracket.thirdQualifiers.length === 8) return "Knockout ready";
+  if (bracket.thirdQualifiers.length > 0) {
+    return `${bracket.thirdQualifiers.length}/8 third-place teams selected`;
+  }
+  return "Group stage rankings saved";
 }

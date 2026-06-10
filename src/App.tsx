@@ -297,6 +297,7 @@ export default function App() {
       <LeaguesModal
         open={leaguesOpen}
         onClose={() => setLeaguesOpen(false)}
+        currentBracket={state}
         locked={predictionsAreLocked}
       />
       <ShareModal
