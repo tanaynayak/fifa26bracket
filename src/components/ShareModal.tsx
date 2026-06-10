@@ -1,8 +1,7 @@
-import { useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useState } from "react";
 import type { BracketState } from "../lib/bracketState";
+import { renderShareImageBlob } from "../lib/shareImage";
 import Modal from "./Modal";
-import ShareCard from "./ShareCard";
 
 interface Props {
   open: boolean;
@@ -11,45 +10,39 @@ interface Props {
   userName: string;
 }
 
-async function waitForCardAssets(node: HTMLElement): Promise<void> {
-  await document.fonts?.ready;
-  const images = Array.from(node.querySelectorAll("img"));
-  await Promise.all(
-    images.map(async (img) => {
-      if (img.complete && img.naturalWidth > 0) return;
-      try {
-        await img.decode();
-      } catch {
-        /* html-to-image will still try to render whatever loaded */
-      }
-    })
-  );
-}
-
-async function renderPng(node: HTMLElement): Promise<Blob> {
-  await waitForCardAssets(node);
-  const dataUrl = await toPng(node, {
-    pixelRatio: 2,
-    cacheBust: true,
-    backgroundColor: "#0a1b2e",
-  });
-  const res = await fetch(dataUrl);
-  return res.blob();
-}
-
 export default function ShareModal({ open, onClose, state, userName }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    let url: string | null = null;
+    setStatus(null);
+    setPreviewUrl(null);
+
+    renderShareImageBlob(state, userName)
+      .then((blob) => {
+        if (!active) return;
+        url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      })
+      .catch(() => {
+        if (active) setStatus("Couldn't render the preview.");
+      });
+
+    return () => {
+      active = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [open, state, userName]);
 
   const withCard = async (fn: (blob: Blob) => Promise<void>, label: string) => {
-    if (!cardRef.current) return;
     setBusy(true);
     setStatus(null);
     try {
-      // two passes — first lets remote images load into the clone reliably
-      await renderPng(cardRef.current);
-      const blob = await renderPng(cardRef.current);
+      const blob = await renderShareImageBlob(state, userName);
       await fn(blob);
     } catch {
       setStatus(`Couldn't ${label}. Try the download button.`);
@@ -93,12 +86,19 @@ export default function ShareModal({ open, onClose, state, userName }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="Share your bracket">
       <div className="flex flex-col items-center">
-        {/* scaled preview; the captured node stays full-res */}
         <div className="mb-5 overflow-hidden rounded-2xl shadow-xl ring-1 ring-slate-200">
-          <div style={{ width: 270, height: 480 }}>
-            <div style={{ transform: "scale(0.5)", transformOrigin: "top left" }}>
-              <ShareCard ref={cardRef} state={state} userName={userName} />
-            </div>
+          <div className="flex h-[480px] w-[270px] items-center justify-center bg-ink">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="Bracket share preview"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-xs font-semibold text-slate-400">
+                Rendering preview...
+              </span>
+            )}
           </div>
         </div>
 
