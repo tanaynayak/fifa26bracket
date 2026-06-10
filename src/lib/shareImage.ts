@@ -7,8 +7,8 @@ const W = 540;
 const H = 960;
 const OUTPUT_SCALE = 2;
 
-const FONT = "Arial, Helvetica, sans-serif";
-const FONT_HEAVY = '"Arial Black", Arial, Helvetica, sans-serif';
+const FONT = '"Barlow", Arial, Helvetica, sans-serif';
+const FONT_HEAVY = '"Barlow Condensed", "Arial Narrow", Arial, Helvetica, sans-serif';
 
 const flagUrl = (flag: string) => `https://flagcdn.com/w320/${flag}.png`;
 
@@ -25,6 +25,15 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+async function ensureFontsLoaded() {
+  if (!document.fonts) return;
+  await Promise.all([
+    document.fonts.load(`700 16px ${FONT}`),
+    document.fonts.load(`800 38px ${FONT_HEAVY}`),
+    document.fonts.ready,
+  ]);
 }
 
 function roundRect(
@@ -138,7 +147,7 @@ function fitFont(
   maxWidth: number,
   start: number,
   min: number,
-  weight = 900,
+  weight = 800,
   family = FONT_HEAVY
 ) {
   let size = start;
@@ -160,7 +169,7 @@ function drawFitText(
   min: number,
   color = "#ffffff",
   align: CanvasTextAlign = "left",
-  weight = 900,
+  weight = 800,
   family = FONT_HEAVY
 ) {
   const size = fitFont(ctx, text, maxWidth, start, min, weight, family);
@@ -182,7 +191,7 @@ function drawCenteredLabel(
   color: string
 ) {
   fillRoundRect(ctx, x, y, w, h, h / 2, fill);
-  ctx.font = font(18, 900, FONT_HEAVY);
+  ctx.font = font(18, 800, FONT_HEAVY);
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -205,7 +214,7 @@ function drawTeamRow(
   strokeRoundRect(ctx, x, y, w, 58, 10, "rgba(255,255,255,0.1)", 1);
 
   fillRoundRect(ctx, x + 12, y + 15, 76, 28, 8, labelFill);
-  ctx.font = font(11, 900, FONT_HEAVY);
+  ctx.font = font(11, 800, FONT_HEAVY);
   ctx.fillStyle = labelFill === "#f4b323" ? "#0a1b2e" : "#ffffff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -238,9 +247,56 @@ function drawSmallTeam(
     9,
     "#ffffff",
     "center",
-    800,
+    700,
     FONT
   );
+}
+
+function drawOutlinedImage(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  outline = 3
+) {
+  const mask = document.createElement("canvas");
+  mask.width = Math.ceil(w * 2);
+  mask.height = Math.ceil(h * 2);
+  const mctx = mask.getContext("2d");
+  if (!mctx) {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+
+  mctx.drawImage(img, 0, 0, mask.width, mask.height);
+  mctx.globalCompositeOperation = "source-in";
+  mctx.fillStyle = "#ffffff";
+  mctx.fillRect(0, 0, mask.width, mask.height);
+
+  const offsets = [
+    [-outline, 0],
+    [outline, 0],
+    [0, -outline],
+    [0, outline],
+    [-outline, -outline],
+    [outline, -outline],
+    [-outline, outline],
+    [outline, outline],
+    [-outline * 0.7, 0],
+    [outline * 0.7, 0],
+    [0, -outline * 0.7],
+    [0, outline * 0.7],
+  ];
+
+  ctx.save();
+  ctx.globalAlpha = 0.98;
+  for (const [dx, dy] of offsets) {
+    ctx.drawImage(mask, x + dx, y + dy, w, h);
+  }
+  ctx.restore();
+  ctx.drawImage(img, x, y, w, h);
 }
 
 function blobFromCanvas(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -270,7 +326,8 @@ export async function renderShareImageBlob(
 
   const teams = [champ, runner, ...semis, ...quarters].filter((t): t is Team => !!t);
   const uniqueTeams = Array.from(new Map(teams.map((t) => [t.id, t])).values());
-  const [emblem, ...flags] = await Promise.all([
+  await ensureFontsLoaded();
+  const [logo, ...flags] = await Promise.all([
     loadImage("/brand/emblem.png"),
     ...uniqueTeams.map((t) => loadImage(flagUrl(t.flag))),
   ]);
@@ -309,23 +366,19 @@ export async function renderShareImageBlob(
   strokeRoundRect(ctx, 25, 25, 490, 910, 18, "rgba(255,255,255,0.22)", 2);
   strokeRoundRect(ctx, 35, 35, 470, 890, 14, "rgba(244,179,35,0.45)", 1);
 
-  if (emblem) {
-    ctx.save();
-    ctx.shadowColor = "rgba(255,255,255,0.8)";
-    ctx.shadowBlur = 4;
-    ctx.drawImage(emblem, 43, 34, 62, 62);
-    ctx.restore();
+  if (logo) {
+    drawOutlinedImage(ctx, logo, 42, 34, 66, 66, 3.2);
   } else {
     drawCenteredLabel(ctx, "26", 43, 39, 62, 52, "#f4b323", "#0a1b2e");
   }
 
-  ctx.font = font(35, 900, FONT_HEAVY);
+  ctx.font = font(35, 800, FONT_HEAVY);
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillText("WORLD CUP 26", 126, 62);
   ctx.fillText("BRACKET", 126, 96);
-  ctx.font = font(15, 800, FONT);
+  ctx.font = font(15, 700, FONT);
   ctx.fillStyle = "#cbd5e1";
   ctx.fillText(userName ? `${userName}'s prediction` : "My prediction", 126, 119);
 
@@ -349,7 +402,7 @@ export async function renderShareImageBlob(
       40,
       "#ffffff",
       "center",
-      900,
+      800,
       FONT_HEAVY
     );
   } else {
@@ -358,7 +411,7 @@ export async function renderShareImageBlob(
 
   fillRoundRect(ctx, 32, 500, 476, 156, 16, "rgba(255,255,255,0.07)");
   strokeRoundRect(ctx, 32, 500, 476, 156, 16, "rgba(255,255,255,0.1)", 1);
-  ctx.font = font(13, 900, FONT_HEAVY);
+  ctx.font = font(13, 800, FONT_HEAVY);
   ctx.fillStyle = "#f4b323";
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -381,7 +434,7 @@ export async function renderShareImageBlob(
   strokeRoundRect(ctx, 32, panelY, 236, panelH, 16, "rgba(255,255,255,0.1)", 1);
   strokeRoundRect(ctx, 282, panelY, 226, panelH, 16, "rgba(255,255,255,0.1)", 1);
 
-  ctx.font = font(12, 900, FONT_HEAVY);
+  ctx.font = font(12, 800, FONT_HEAVY);
   ctx.fillStyle = "#cbd5e1";
   ctx.textAlign = "center";
   ctx.fillText("FINAL FOUR", 150, panelY + 30);
@@ -410,7 +463,7 @@ export async function renderShareImageBlob(
     drawCoverImage(ctx, flagById.get(team.id) ?? null, x + 4, y + 5, 31, 22, 4);
   });
 
-  ctx.font = font(12, 900, FONT);
+  ctx.font = font(12, 700, FONT);
   ctx.fillStyle = "#94a3b8";
   ctx.textAlign = "center";
   ctx.fillText("BUILD YOURS · WORLD CUP 26 BRACKET", W / 2, 920);
