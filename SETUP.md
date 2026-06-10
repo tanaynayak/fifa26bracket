@@ -146,6 +146,9 @@ vars in Vercel, trigger a redeploy (Deployments → ⋯ → Redeploy).
 - **Can't join a league by code from another account** — rerun
   [`supabase/schema.sql`](supabase/schema.sql) in Supabase SQL Editor. It installs
   the `join_league_by_code` database function used by the app.
+- **Prediction lock not enforced in Supabase** — rerun
+  [`supabase/schema.sql`](supabase/schema.sql). The database policies reject
+  bracket saves and league create/join writes after June 11, 2026 at 3:00 PM ET.
 - **Can't see a friend's bracket** — make sure you both joined the same league
   code; cross-member visibility is what unlocks it.
 - **Google login blocked ("app not verified")** — add your email under OAuth
