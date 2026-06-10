@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", sans-serif;
+
+  /* World Cup 26 "We Are 26" inspired palette */
+  --color-ink: #0a1b2e; /* deep stadium navy */
+  --color-ink-700: #123047;
+  --color-gold: #f4b323; /* trophy gold */
+  --color-pitch: #1a8a4b; /* grass green */
+  --color-flame: #d1192e; /* vibrant red accent */
+  --color-azure: #1f4fd1; /* vibrant blue accent */
+
+  /* Retune the emerald scale to a richer, grassier pitch-green so the whole
+     app reads as football rather than generic SaaS teal. */
+  --color-emerald-50: #eef6f0;
+  --color-emerald-100: #d4ead9;
+  --color-emerald-200: #a8d5b4;
+  --color-emerald-300: #79bf8d;
+  --color-emerald-400: #45a368;
+  --color-emerald-500: #1f8f4f;
+  --color-emerald-600: #167a41;
+  --color-emerald-700: #115e33;
+  --color-emerald-800: #0d4a29;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-color: #e3eee2;
+  background-image:
+    radial-gradient(60rem 60rem at 110% -10%, rgba(15, 157, 88, 0.14), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 0%, rgba(43, 80, 226, 0.06), transparent 55%),
+    linear-gradient(180deg, #e9f2e7 0%, #dcebda 100%);
+  background-attachment: fixed;
+}
+
+/* Stadium header — deep navy base. The vivid geometry is layered on top as
+   asymmetric triangular color shards (see App.tsx). */
+.app-header {
+  background: linear-gradient(120deg, #07131f 0%, #0c2236 58%, #0a1b2e 100%);
+}
+
+/* Thin, unobtrusive scrollbars for the bracket scroller */
+.scroll-slim::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
