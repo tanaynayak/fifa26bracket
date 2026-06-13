@@ -1,4 +1,4 @@
-# World Cup 26 Bracket
+# [World Cup 26 Bracket](https://fifa26bracket.vercel.app/#)
 
 A mobile- and laptop-friendly World Cup 2026 bracket predictor: rank the groups,
 pick the 8 best third-placed teams, build the knockout tree, then save it,
